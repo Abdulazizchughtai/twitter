@@ -1,6 +1,7 @@
 import TweetList from "../components/TweetList";
 import TweetForm from "../components/TweetForm";
 
+
 const Feed = () => {
   const user = JSON.parse(sessionStorage.getItem("user"));
 
@@ -10,6 +11,7 @@ const Feed = () => {
       <div className="mt-6 w-full max-w-2xl">
         <TweetList currentUser={user} />
       </div>
+      
     </div>
   );
 };

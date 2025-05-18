@@ -23,7 +23,8 @@ const Navbar = () => {
   const handleLogout = async () => {
     const auth = getAuth();
     await signOut(auth);
-    navigate("/signup");
+           navigate("/signup");
+ 
   };
 
   return (
@@ -37,7 +38,10 @@ const Navbar = () => {
           <li>
             {user ? (
               <button onClick={handleLogout} className="hover:text-[#1DA1F2] transition">Sign out</button>
-            ) : (
+
+            )
+        
+            : (
               <Link to="/" className="hover:text-[#1DA1F2] transition">Sign up</Link>
             )}
           </li>
