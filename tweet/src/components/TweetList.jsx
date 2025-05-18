@@ -15,7 +15,7 @@ import {
 const TweetList = ({ currentUser }) => {
   const [tweets, setTweets] = useState([]);
   const [comments, setComments] = useState({});
-  const [openLikesTweetId, setOpenLikesTweetId] = useState(null); // to toggle like list
+  const [openLikesTweetId, setOpenLikesTweetId] = useState(null); 
 
   useEffect(() => {
     const q = query(collection(db, "tweets"), orderBy("createdAt", "desc"));
