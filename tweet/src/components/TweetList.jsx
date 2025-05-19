@@ -11,15 +11,15 @@ import {
   deleteDoc,
   arrayRemove,
 } from "firebase/firestore";
+import { FaRegHeart, FaHeart, FaTrash } from "react-icons/fa";
 
 const TweetList = ({ currentUser }) => {
   const [tweets, setTweets] = useState([]);
   const [comments, setComments] = useState({});
-  const [openLikesTweetId, setOpenLikesTweetId] = useState(null); 
+  const [openLikesTweetId, setOpenLikesTweetId] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "tweets"), orderBy("createdAt", "desc"));
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const tweetsData = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -66,29 +66,19 @@ const TweetList = ({ currentUser }) => {
   };
 
   const handleDeleteTweet = async (tweetId) => {
-    try {
-      const confirm = window.confirm("Are you sure you want to delete this tweet?");
-      if (!confirm) return;
-
-      const tweetRef = doc(db, "tweets", tweetId);
-      await deleteDoc(tweetRef);
-    } catch (error) {
-      console.error("Error deleting tweet:", error);
-    }
+    const confirm = window.confirm("Are you sure you want to delete this post?");
+    if (!confirm) return;
+    await deleteDoc(doc(db, "tweets", tweetId));
   };
 
   const handleDeleteComment = async (tweetId, comment) => {
-    try {
-      const confirm = window.confirm("Are you sure you want to delete this comment?");
-      if (!confirm) return;
+    const confirm = window.confirm("Are you sure you want to delete this comment?");
+    if (!confirm) return;
 
-      const tweetRef = doc(db, "tweets", tweetId);
-      await updateDoc(tweetRef, {
-        comments: arrayRemove(comment),
-      });
-    } catch (error) {
-      console.error("Error deleting comment:", error);
-    }
+    const tweetRef = doc(db, "tweets", tweetId);
+    await updateDoc(tweetRef, {
+      comments: arrayRemove(comment),
+    });
   };
 
   const toggleLikesList = (tweetId) => {
@@ -96,97 +86,106 @@ const TweetList = ({ currentUser }) => {
   };
 
   return (
-    <div className="space-y-4">
-      {tweets.map((tweet) => (
-        <div key={tweet.id} className="bg-[#1d1f23] p-4 rounded-xl relative">
-          <p className="text-white">{tweet.text}</p>
+    <div className="space-y-6">
+      {tweets.map((tweet) => {
+        const hasLiked = tweet.likedBy?.includes(currentUser.email);
 
-          {tweet.author === currentUser.email && (
-            <button
-              onClick={() => handleDeleteTweet(tweet.id)}
-              className="absolute top-2 right-2 text-red-500 text-xs hover:text-red-400"
-              title="Delete Tweet"
-            >
-              🗑 Delete
-            </button>
-          )}
-
-          <div className="mt-2 text-sm text-gray-400 flex justify-between items-center">
-            <span>By: {tweet.author}</span>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => handleLike(tweet)}
-                className={`text-sm px-2 py-1 rounded transition ${
-                  tweet.likedBy?.includes(currentUser.email)
-                    ? "text-[#1DA1F2]"
-                    : "text-gray-400"
-                } hover:text-[#1DA1F2] focus:outline-none active:scale-95`}
-              >
-                ❤️ {tweet.likes || 0}
-              </button>
-              <button
-                onClick={() => toggleLikesList(tweet.id)}
-                className="text-xs text-gray-400 hover:text-white"
-              >
-                {openLikesTweetId === tweet.id ? "Hide likes" : "View likes"}
-              </button>
+        return (
+          <div
+            key={tweet.id}
+            className="bg-[#1d1f23] p-4 rounded-xl shadow-lg border border-[#333] transition-all"
+          >
+            {/* Author */}
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-white font-semibold">@{tweet.author}</span>
+              {tweet.author === currentUser.email && (
+                <button
+                  onClick={() => handleDeleteTweet(tweet.id)}
+                  className="text-red-400 hover:text-red-200 transition"
+                  title="Delete Tweet"
+                >
+                  <FaTrash />
+                </button>
+              )}
             </div>
-          </div>
 
-          {openLikesTweetId === tweet.id && (
-            <div className="mt-2 text-xs text-gray-300 bg-[#2a2d33] p-2 rounded border border-gray-600">
-              <p className="mb-1 font-semibold">Liked by:</p>
-              {tweet.likedBy && tweet.likedBy.length > 0 ? (
+            {/* Tweet content */}
+            <p className="text-white text-base mb-3">{tweet.text}</p>
+
+            {/* Likes */}
+            <div className="flex items-center gap-3 mb-1">
+              <button onClick={() => handleLike(tweet)}>
+                {hasLiked ? (
+                  <FaHeart className="text-[#E1306C] text-xl" />
+                ) : (
+                  <FaRegHeart className="text-white text-xl hover:text-[#E1306C] transition" />
+                )}
+              </button>
+              <span className="text-gray-300 text-sm">
+                {tweet.likes > 0 ? `${tweet.likes} like${tweet.likes > 1 ? "s" : ""}` : "No likes yet"}
+              </span>
+              {tweet.likes > 0 && (
+                <button
+                  onClick={() => toggleLikesList(tweet.id)}
+                  className="text-xs text-gray-400 hover:text-white ml-2"
+                >
+                  {openLikesTweetId === tweet.id ? "Hide likes" : "View likes"}
+                </button>
+              )}
+            </div>
+
+            {/* Likes list */}
+            {openLikesTweetId === tweet.id && (
+              <div className="bg-[#2a2d33] p-2 rounded-md mt-1 text-sm text-gray-300">
+                <p className="mb-1 text-white font-medium">Liked by:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  {tweet.likedBy.map((user, idx) => (
+                  {(tweet.likedBy || []).map((user, idx) => (
                     <li key={idx}>{user}</li>
                   ))}
                 </ul>
-              ) : (
-                <p>No likes yet.</p>
-              )}
-            </div>
-          )}
-
-          <div className="mt-3 space-y-1 text-sm text-gray-300">
-            {(tweet.comments || []).map((c, idx) => (
-              <div
-                key={idx}
-                className="border-l-4 pl-3 border-[#1d9bf0] flex justify-between items-center"
-              >
-                <p>
-                  <strong>{c.author}</strong>: {c.text}
-                </p>
-                {c.author === currentUser.email && (
-                  <button
-                    onClick={() => handleDeleteComment(tweet.id, c)}
-                    className="text-red-500 text-xs hover:text-red-400 ml-2"
-                    title="Delete Comment"
-                  >
-                    🗑
-                  </button>
-                )}
               </div>
-            ))}
-          </div>
+            )}
 
-          <div className="mt-2 flex items-center space-x-2">
-            <input
-              type="text"
-              placeholder="Write a comment..."
-              value={comments[tweet.id] || ""}
-              onChange={(e) => handleCommentChange(tweet.id, e.target.value)}
-              className="flex-1 px-3 py-1 rounded bg-[#2a2d33] border border-gray-600 text-white text-sm focus:outline-none"
-            />
-            <button
-              onClick={() => handleAddComment(tweet.id)}
-              className="bg-[#1d9bf0] px-3 py-1 rounded text-sm hover:bg-[#1a8cd8]"
-            >
-              Comment
-            </button>
+            {/* Comments */}
+            <div className="space-y-2 text-sm text-gray-300 mt-3">
+              {(tweet.comments || []).map((c, idx) => (
+                <div key={idx} className="flex justify-between items-center bg-[#2a2d33] p-2 rounded-lg">
+                  <p>
+                    <span className="font-semibold text-white">{c.author}</span>{" "}
+                    <span>{c.text}</span>
+                  </p>
+                  {c.author === currentUser.email && (
+                    <button
+                      onClick={() => handleDeleteComment(tweet.id, c)}
+                      className="text-red-400 hover:text-red-200 ml-2"
+                      title="Delete Comment"
+                    >
+                      <FaTrash size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Add comment */}
+            <div className="mt-4 flex items-center border-t border-[#333] pt-3">
+              <input
+                type="text"
+                placeholder="Add a comment..."
+                value={comments[tweet.id] || ""}
+                onChange={(e) => handleCommentChange(tweet.id, e.target.value)}
+                className="flex-1 bg-transparent text-white placeholder-gray-500 text-sm px-2 py-1 focus:outline-none"
+              />
+              <button
+                onClick={() => handleAddComment(tweet.id)}
+                className="text-[#1DA1F2] font-medium text-sm hover:underline"
+              >
+                Post
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
