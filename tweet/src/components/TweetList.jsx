@@ -12,11 +12,14 @@ import {
   arrayRemove,
 } from "firebase/firestore";
 import { FaRegHeart, FaHeart, FaTrash } from "react-icons/fa";
+import ConfirmationModal from "./ConfirmationModal";
 
 const TweetList = ({ currentUser }) => {
   const [tweets, setTweets] = useState([]);
   const [comments, setComments] = useState({});
   const [openLikesTweetId, setOpenLikesTweetId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalAction, setModalAction] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "tweets"), orderBy("createdAt", "desc"));
@@ -30,6 +33,14 @@ const TweetList = ({ currentUser }) => {
 
     return () => unsubscribe();
   }, []);
+
+  const confirmAction = (action) => {
+    setModalAction(() => () => {
+      action();
+      setShowModal(false);
+    });
+    setShowModal(true);
+  };
 
   const handleLike = async (tweet) => {
     const tweetRef = doc(db, "tweets", tweet.id);
@@ -65,20 +76,16 @@ const TweetList = ({ currentUser }) => {
     setComments((prev) => ({ ...prev, [tweetId]: "" }));
   };
 
-  const handleDeleteTweet = async (tweetId) => {
-    const confirm = window.confirm("Are you sure you want to delete this post?");
-    if (!confirm) return;
-    await deleteDoc(doc(db, "tweets", tweetId));
+  const handleDeleteTweet = (tweetId) => {
+    confirmAction(() => deleteDoc(doc(db, "tweets", tweetId)));
   };
 
-  const handleDeleteComment = async (tweetId, comment) => {
-    const confirm = window.confirm("Are you sure you want to delete this comment?");
-    if (!confirm) return;
-
-    const tweetRef = doc(db, "tweets", tweetId);
-    await updateDoc(tweetRef, {
-      comments: arrayRemove(comment),
-    });
+  const handleDeleteComment = (tweetId, comment) => {
+    confirmAction(() =>
+      updateDoc(doc(db, "tweets", tweetId), {
+        comments: arrayRemove(comment),
+      })
+    );
   };
 
   const toggleLikesList = (tweetId) => {
@@ -186,6 +193,14 @@ const TweetList = ({ currentUser }) => {
           </div>
         );
       })}
+
+      {showModal && (
+        <ConfirmationModal
+          message="Are you sure you want to delete this?"
+          onConfirm={modalAction}
+          onCancel={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 };
