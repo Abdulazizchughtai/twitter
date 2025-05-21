@@ -119,6 +119,15 @@ const TweetList = ({ currentUser }) => {
             {/* Tweet content */}
             <p className="text-white text-base mb-3">{tweet.text}</p>
 
+            {/* Tweet Image */}
+            {tweet.imageUrl && typeof tweet.imageUrl === "string" && (
+              <img
+                src={tweet.imageUrl}
+                alt="Tweet Image"
+                className="mt-3 rounded-lg max-h-60 object-cover w-full"
+              />
+            )}
+
             {/* Likes */}
             <div className="flex items-center gap-3 mb-1">
               <button onClick={() => handleLike(tweet)}>
@@ -129,7 +138,9 @@ const TweetList = ({ currentUser }) => {
                 )}
               </button>
               <span className="text-gray-300 text-sm">
-                {tweet.likes > 0 ? `${tweet.likes} like${tweet.likes > 1 ? "s" : ""}` : "No likes yet"}
+                {tweet.likes > 0
+                  ? `${tweet.likes} like${tweet.likes > 1 ? "s" : ""}`
+                  : "No likes yet"}
               </span>
               {tweet.likes > 0 && (
                 <button
@@ -156,7 +167,10 @@ const TweetList = ({ currentUser }) => {
             {/* Comments */}
             <div className="space-y-2 text-sm text-gray-300 mt-3">
               {(tweet.comments || []).map((c, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-[#2a2d33] p-2 rounded-lg">
+                <div
+                  key={idx}
+                  className="flex justify-between items-center bg-[#2a2d33] p-2 rounded-lg"
+                >
                   <p>
                     <span className="font-semibold text-white">{c.author}</span>{" "}
                     <span>{c.text}</span>
@@ -164,40 +178,44 @@ const TweetList = ({ currentUser }) => {
                   {c.author === currentUser.email && (
                     <button
                       onClick={() => handleDeleteComment(tweet.id, c)}
-                      className="text-red-400 hover:text-red-200 ml-2"
+                      className="text-red-400 hover:text-red-200 transition ml-3"
                       title="Delete Comment"
                     >
-                      <FaTrash size={14} />
+                      <FaTrash />
                     </button>
                   )}
                 </div>
               ))}
-            </div>
-
-            {/* Add comment */}
-            <div className="mt-4 flex items-center border-t border-[#333] pt-3">
-              <input
-                type="text"
-                placeholder="Add a comment..."
-                value={comments[tweet.id] || ""}
-                onChange={(e) => handleCommentChange(tweet.id, e.target.value)}
-                className="flex-1 bg-transparent text-white placeholder-gray-500 text-sm px-2 py-1 focus:outline-none"
-              />
-              <button
-                onClick={() => handleAddComment(tweet.id)}
-                className="text-[#1DA1F2] font-medium text-sm hover:underline"
-              >
-                Post
-              </button>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Add a comment..."
+                  className="flex-grow rounded-md px-3 py-2 bg-[#22252a] text-white focus:outline-none"
+                  value={comments[tweet.id] || ""}
+                  onChange={(e) => handleCommentChange(tweet.id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddComment(tweet.id);
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => handleAddComment(tweet.id)}
+                  className="bg-[#1d9bf0] hover:bg-[#1a8cd8] rounded-md px-3 py-2 font-semibold transition text-white"
+                >
+                  Post
+                </button>
+              </div>
             </div>
           </div>
         );
       })}
 
+      {/* Confirmation modal */}
       {showModal && (
         <ConfirmationModal
-          message="Are you sure you want to delete this?"
-          onConfirm={modalAction}
+          onConfirm={() => modalAction()}
           onCancel={() => setShowModal(false)}
         />
       )}
