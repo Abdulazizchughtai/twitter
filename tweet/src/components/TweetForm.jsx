@@ -38,20 +38,20 @@ const TweetForm = ({ currentUser }) => {
   const getUserMessage = (emailOrName) => {
     emailOrName = emailOrName.toLowerCase();
     if (emailOrName.includes("zain")) return "Fuck off niger 🖕";
-    if (emailOrName.includes("danial")) return "Shut the fuck up poti man 🖕";
+    if (emailOrName.includes("danial")) return "Shut the fuck up poti man 💩";
     if (emailOrName.includes("affan")) return "BAKWAS BAND KER KALEEEE 🧑🏿";
     if (emailOrName.includes("badar") || emailOrName.includes("bader"))
       return "Ja phaly bara hoke aa kode 🧝‍♂️";
     if (emailOrName.includes("haider") || emailOrName.includes("hader"))
       return "Ja phaly bara hoke aa kode 🧝‍♂️";
-    if (emailOrName.includes("fawad")) return "Bad bull dog 🐶";
+    if (emailOrName.includes("fawad")) return "Bad bull dog 🐶 aka (samnabadi chapri) aka (big ass monster) 🍑";
     return "Mama khaty ha jo bolta ha wohi hota ha 😒";
   };
 
   const handlePostTweet = async () => {
     if (!tweet.trim() && !imageFile) return;
 
-    // Check for profanity
+
     const tweetLower = tweet.toLowerCase();
     const containsBadWords = badWords.some((word) =>
       tweetLower.includes(word)
