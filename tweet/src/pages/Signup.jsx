@@ -1,28 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import api from "../api/axios"; // <-- Axios instance pointing to your backend
 
 const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
   <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
     <div className="bg-[#15202b] p-6 rounded-lg max-w-sm w-full text-white shadow-lg">
       <p className="mb-4">{message}</p>
       <div className="flex justify-end space-x-4">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 transition"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={onConfirm}
-          className="px-4 py-2 bg-[#1DA1F2] rounded hover:bg-[#1a91da] transition"
-        >
-          OK
-        </button>
+        <button onClick={onCancel} className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 transition">Cancel</button>
+        <button onClick={onConfirm} className="px-4 py-2 bg-[#1DA1F2] rounded hover:bg-[#1a91da] transition">OK</button>
       </div>
     </div>
   </div>
@@ -44,21 +30,29 @@ const Signup = () => {
 
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
-        sessionStorage.setItem("user", JSON.stringify({ email }));
-        setModalMessage("Account Created!");
+        await api.post("/auth/register", {
+          name: fullName,
+          email,
+          password,
+        });
+        setModalMessage("Account created!");
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        sessionStorage.setItem("user", JSON.stringify({ email }));
-        setModalMessage("Account Logged in!");
+        const res = await api.post("/auth/login", {
+          email,
+          password,
+        });
+        const { token } = res.data;
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify({ email }));
+        setModalMessage("Logged in!");
       }
 
       setEmail("");
       setPassword("");
       setFullName("");
-      setShowModal(true); // Show modal instead of alert
+      setShowModal(true);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || "Something went wrong.");
     }
   };
 
@@ -72,17 +66,13 @@ const Signup = () => {
       <div className="bg-[#15202b] p-8 rounded-xl shadow-xl w-full max-w-md text-white">
         <div className="flex justify-center mb-6">
           <button
-            className={`px-4 py-2 font-semibold rounded-l-md transition ${
-              isSignUp ? "bg-[#1DA1F2] text-white" : "bg-[#2F3336] text-[#8899A6]"
-            }`}
+            className={`px-4 py-2 font-semibold rounded-l-md transition ${isSignUp ? "bg-[#1DA1F2]" : "bg-[#2F3336] text-[#8899A6]"}`}
             onClick={() => setIsSignUp(true)}
           >
             Sign Up
           </button>
           <button
-            className={`px-4 py-2 font-semibold rounded-r-md transition ${
-              !isSignUp ? "bg-[#1DA1F2] text-white" : "bg-[#2F3336] text-[#8899A6]"
-            }`}
+            className={`px-4 py-2 font-semibold rounded-r-md transition ${!isSignUp ? "bg-[#1DA1F2]" : "bg-[#2F3336] text-[#8899A6]"}`}
             onClick={() => setIsSignUp(false)}
           >
             Sign In
@@ -125,9 +115,7 @@ const Signup = () => {
         {!isSignUp && (
           <p className="mt-4 text-sm text-center text-[#8899A6]">
             Forgot your password?{" "}
-            <a href="#" className="text-[#1DA1F2] hover:underline">
-              Reset here
-            </a>
+            <a href="#" className="text-[#1DA1F2] hover:underline">Reset here</a>
           </p>
         )}
       </div>

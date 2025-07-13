@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { RiMenuSearchLine } from "react-icons/ri";
 import { IoIosClose } from "react-icons/io";
+import { jwtDecode } from "jwt-decode";
 
 const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
   <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
@@ -27,35 +27,36 @@ const ConfirmationModal = ({ message, onConfirm, onCancel }) => (
 );
 
 const Navbar = () => {
-  const [nav, setNav] = useState(false);
   const [user, setUser] = useState(null);
+  const [nav, setNav] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
   const toggleNav = () => setNav(!nav);
 
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUser(decoded);
+      } catch (err) {
+        console.error("Invalid token");
+        setUser(null);
+      }
+    }
   }, []);
 
-  const handleLogout = async () => {
-    const auth = getAuth();
-    await signOut(auth);
-    navigate("/signup");
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    navigate("/");
   };
 
-  // New: when clicking Sign Out button
-  const handleSignOutClick = () => {
-    setShowModal(true);
-  };
-
-  const confirmSignOut = async () => {
+  const handleSignOutClick = () => setShowModal(true);
+  const confirmSignOut = () => {
     setShowModal(false);
-    await handleLogout();
+    handleLogout();
   };
 
   return (
@@ -63,7 +64,6 @@ const Navbar = () => {
       <div className="max-w-[1240px] mx-auto flex justify-between items-center h-24">
         <h1 className="text-3xl font-bold text-[#1DA1F2]">Twitter</h1>
 
-        {/* Desktop menu */}
         <ul className="hidden md:flex space-x-6">
           <li>
             {user ? (
@@ -95,14 +95,14 @@ const Navbar = () => {
             nav ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <li className="w-full border-b border-gray-700 pb-2 transition-colors duration-300">
+          <li className="w-full border-b border-gray-700 pb-2">
             {user ? (
               <button
                 onClick={() => {
                   setShowModal(true);
                   toggleNav();
                 }}
-                className="w-full text-left outline-none hover:text-[#1DA1F2] focus:text-[#1DA1F2] active:text-[#1DA1F2] hover:border-[#1DA1F2] focus:border-[#1DA1F2] active:border-[#1DA1F2] transition-colors duration-300"
+                className="w-full text-left hover:text-[#1DA1F2] transition"
               >
                 Sign out
               </button>
@@ -110,7 +110,7 @@ const Navbar = () => {
               <Link
                 to="/"
                 onClick={toggleNav}
-                className="w-full block text-left outline-none hover:text-[#1DA1F2] focus:text-[#1DA1F2] active:text-[#1DA1F2] hover:border-[#1DA1F2] focus:border-[#1DA1F2] active:border-[#1DA1F2] transition-colors duration-300"
+                className="w-full block text-left hover:text-[#1DA1F2] transition"
               >
                 Sign up
               </Link>
@@ -119,11 +119,11 @@ const Navbar = () => {
 
           <li
             onClick={toggleNav}
-            className="w-full border-b border-gray-700 pb-2 transition-colors duration-300"
+            className="w-full border-b border-gray-700 pb-2"
           >
             <Link
               to="/feed"
-              className="w-full block text-left outline-none hover:text-[#1DA1F2] focus:text-[#1DA1F2] active:text-[#1DA1F2] hover:border-[#1DA1F2] focus:border-[#1DA1F2] active:border-[#1DA1F2] transition-colors duration-300"
+              className="w-full block text-left hover:text-[#1DA1F2] transition"
             >
               Feed
             </Link>

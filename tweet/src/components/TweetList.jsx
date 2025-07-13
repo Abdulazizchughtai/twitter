@@ -1,38 +1,13 @@
-import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  updateDoc,
-  doc,
-  arrayUnion,
-  deleteDoc,
-  arrayRemove,
-} from "firebase/firestore";
+import { useState } from "react";
 import { FaRegHeart, FaHeart, FaTrash } from "react-icons/fa";
 import ConfirmationModal from "./ConfirmationModal";
+import api from "../api/axios";
 
-const TweetList = ({ currentUser }) => {
-  const [tweets, setTweets] = useState([]);
+const TweetList = ({ currentUser, tweets, onRefresh }) => {
   const [comments, setComments] = useState({});
   const [openLikesTweetId, setOpenLikesTweetId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalAction, setModalAction] = useState(null);
-
-  useEffect(() => {
-    const q = query(collection(db, "tweets"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const tweetsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setTweets(tweetsData);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const confirmAction = (action) => {
     setModalAction(() => () => {
@@ -43,49 +18,61 @@ const TweetList = ({ currentUser }) => {
   };
 
   const handleLike = async (tweet) => {
-    const tweetRef = doc(db, "tweets", tweet.id);
-    const hasLiked = tweet.likedBy?.includes(currentUser.email);
+    if (!currentUser?.email) return;
 
-    const updatedLikes = hasLiked
-      ? tweet.likedBy.filter((email) => email !== currentUser.email)
-      : [...(tweet.likedBy || []), currentUser.email];
+    try {
+      await api.put(`/tweets/${tweet._id}/like`, {
+        email: currentUser.email,
+      });
+      onRefresh();
+    } catch (err) {
+      console.error("Like failed:", err);
+    }
+  };
 
-    await updateDoc(tweetRef, {
-      likedBy: updatedLikes,
-      likes: updatedLikes.length,
+  const handleAddComment = async (tweetId) => {
+    const comment = comments[tweetId]?.trim();
+    if (!comment || !currentUser?.email) return;
+
+    try {
+      await api.put(`/tweets/${tweetId}/comment`, {
+        text: comment,
+        author: currentUser.email,
+      });
+      setComments((prev) => ({ ...prev, [tweetId]: "" }));
+      onRefresh();
+    } catch (err) {
+      console.error("Error adding comment:", err);
+    }
+  };
+
+  const handleDeleteTweet = async (tweetId) => {
+    confirmAction(async () => {
+      try {
+        await api.delete(`/tweets/${tweetId}`);
+        onRefresh();
+      } catch (err) {
+        console.error("Error deleting tweet:", err);
+      }
+    });
+  };
+
+  const handleDeleteComment = async (tweetId, comment) => {
+    confirmAction(async () => {
+      try {
+        await api.put(`/tweets/${tweetId}/comment/delete`, {
+          text: comment.text,
+          author: comment.author,
+        });
+        onRefresh();
+      } catch (err) {
+        console.error("Error deleting comment:", err);
+      }
     });
   };
 
   const handleCommentChange = (tweetId, value) => {
     setComments((prev) => ({ ...prev, [tweetId]: value }));
-  };
-
-  const handleAddComment = async (tweetId) => {
-    const comment = comments[tweetId]?.trim();
-    if (!comment) return;
-
-    const tweetRef = doc(db, "tweets", tweetId);
-    await updateDoc(tweetRef, {
-      comments: arrayUnion({
-        text: comment,
-        author: currentUser.email,
-        createdAt: new Date().toISOString(),
-      }),
-    });
-
-    setComments((prev) => ({ ...prev, [tweetId]: "" }));
-  };
-
-  const handleDeleteTweet = (tweetId) => {
-    confirmAction(() => deleteDoc(doc(db, "tweets", tweetId)));
-  };
-
-  const handleDeleteComment = (tweetId, comment) => {
-    confirmAction(() =>
-      updateDoc(doc(db, "tweets", tweetId), {
-        comments: arrayRemove(comment),
-      })
-    );
   };
 
   const toggleLikesList = (tweetId) => {
@@ -95,19 +82,18 @@ const TweetList = ({ currentUser }) => {
   return (
     <div className="space-y-6">
       {tweets.map((tweet) => {
-        const hasLiked = tweet.likedBy?.includes(currentUser.email);
+        const hasLiked = (tweet.likedBy || []).includes(currentUser.email);
 
         return (
           <div
-            key={tweet.id}
-            className="bg-[#1d1f23] p-4 rounded-xl shadow-lg border border-[#333] transition-all"
+            key={tweet._id}
+            className="bg-[#1d1f23] p-4 rounded-xl shadow-lg border border-[#333]"
           >
-            {/* Author */}
             <div className="flex justify-between items-center mb-2">
               <span className="text-white font-semibold">@{tweet.author}</span>
               {tweet.author === currentUser.email && (
                 <button
-                  onClick={() => handleDeleteTweet(tweet.id)}
+                  onClick={() => handleDeleteTweet(tweet._id)}
                   className="text-red-400 hover:text-red-200 transition"
                   title="Delete Tweet"
                 >
@@ -116,25 +102,14 @@ const TweetList = ({ currentUser }) => {
               )}
             </div>
 
-            {/* Tweet content */}
             <p className="text-white text-base mb-3">{tweet.text}</p>
 
-            {/* Tweet Image */}
-            {tweet.imageUrl && typeof tweet.imageUrl === "string" && (
-              <img
-                src={tweet.imageUrl}
-                alt="Tweet Image"
-                className="mt-3 rounded-lg max-h-60 object-cover w-full"
-              />
-            )}
-
-            {/* Likes */}
             <div className="flex items-center gap-3 mb-1">
               <button onClick={() => handleLike(tweet)}>
                 {hasLiked ? (
                   <FaHeart className="text-[#E1306C] text-xl" />
                 ) : (
-                  <FaRegHeart className="text-white text-xl hover:text-[#E1306C] transition" />
+                  <FaRegHeart className="text-white text-xl hover:text-[#E1306C]" />
                 )}
               </button>
               <span className="text-gray-300 text-sm">
@@ -144,16 +119,15 @@ const TweetList = ({ currentUser }) => {
               </span>
               {tweet.likes > 0 && (
                 <button
-                  onClick={() => toggleLikesList(tweet.id)}
+                  onClick={() => toggleLikesList(tweet._id)}
                   className="text-xs text-gray-400 hover:text-white ml-2"
                 >
-                  {openLikesTweetId === tweet.id ? "Hide likes" : "View likes"}
+                  {openLikesTweetId === tweet._id ? "Hide likes" : "View likes"}
                 </button>
               )}
             </div>
 
-            {/* Likes list */}
-            {openLikesTweetId === tweet.id && (
+            {openLikesTweetId === tweet._id && (
               <div className="bg-[#2a2d33] p-2 rounded-md mt-1 text-sm text-gray-300">
                 <p className="mb-1 text-white font-medium">Liked by:</p>
                 <ul className="list-disc list-inside space-y-1">
@@ -164,7 +138,6 @@ const TweetList = ({ currentUser }) => {
               </div>
             )}
 
-            {/* Comments */}
             <div className="space-y-2 text-sm text-gray-300 mt-3">
               {(tweet.comments || []).map((c, idx) => (
                 <div
@@ -177,7 +150,7 @@ const TweetList = ({ currentUser }) => {
                   </p>
                   {c.author === currentUser.email && (
                     <button
-                      onClick={() => handleDeleteComment(tweet.id, c)}
+                      onClick={() => handleDeleteComment(tweet._id, c)}
                       className="text-red-400 hover:text-red-200 transition ml-3"
                       title="Delete Comment"
                     >
@@ -190,19 +163,21 @@ const TweetList = ({ currentUser }) => {
                 <input
                   type="text"
                   placeholder="Add a comment..."
-                  className="flex-grow rounded-md px-3 py-2 bg-[#22252a] text-white focus:outline-none"
-                  value={comments[tweet.id] || ""}
-                  onChange={(e) => handleCommentChange(tweet.id, e.target.value)}
+                  className="flex-grow rounded-md px-3 py-2 bg-[#22252a] text-white"
+                  value={comments[tweet._id] || ""}
+                  onChange={(e) =>
+                    handleCommentChange(tweet._id, e.target.value)
+                  }
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      handleAddComment(tweet.id);
+                      handleAddComment(tweet._id);
                     }
                   }}
                 />
                 <button
-                  onClick={() => handleAddComment(tweet.id)}
-                  className="bg-[#1d9bf0] hover:bg-[#1a8cd8] rounded-md px-3 py-2 font-semibold transition text-white"
+                  onClick={() => handleAddComment(tweet._id)}
+                  className="bg-[#1d9bf0] hover:bg-[#1a8cd8] rounded-md px-3 py-2 font-semibold text-white"
                 >
                   Post
                 </button>
@@ -212,7 +187,6 @@ const TweetList = ({ currentUser }) => {
         );
       })}
 
-      {/* Confirmation modal */}
       {showModal && (
         <ConfirmationModal
           onConfirm={() => modalAction()}

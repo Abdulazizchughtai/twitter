@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Routes, Route } from "react-router-dom";
 import './App.css'
 import Signup from './pages/Signup'
-import Feed from './pages/Feed'
+import Feed from './components/Feed'
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 
